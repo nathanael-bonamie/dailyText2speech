@@ -30,7 +30,7 @@ com = extractWords(com);
 
 var blob = new Blob([jour + "\n\n" + refText + "\n\n" + com], {type: "text/plain;charset=utf-8"});
 saveAs(blob, y+"-"+m+"-"+j+"-daily.txt");
-
+window.close();
   }
 xhttp.open("GET", url, true);
 xhttp.send();
