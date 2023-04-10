@@ -1,7 +1,11 @@
 var tag;
 var comm;
 var tst = false;
-var url = ("https://wol.jw.org/fr/wol/h/r30/lp-f/2023/4/8");
+var date = new Date();
+var y = date.getUTCFullYear();
+var m = date.getUTCMonth()+1;
+var j = date.getUTCDate();
+var url = ("https://wol.jw.org/fr/wol/h/r30/lp-f/" + y + "/" + m + "/" + j);
 const xhttp = new XMLHttpRequest();
 	xhttp.onload = function() {
     tag = this.responseText;
