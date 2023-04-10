@@ -33,9 +33,7 @@ saveAs(blob, "helloworld.txt");
 
   }
 xhttp.open("GET", url, true);
-xhttp.setRequestHeader("Access-Control-Allow-Headers", "*");
-xhttp.setRequestHeader("Access-Control-Allow-Origin", "https://nathanael-bonamie.github.io");
-xhttp.send(null);
+xhttp.send();
   
 function extractWords(str) {
 	str = [...str];
