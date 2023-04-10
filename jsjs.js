@@ -26,10 +26,10 @@ refText += refTextt;
 
 com = extractWords(com);
 
-console.log(jour + "\n\n" + refText + "\n\n" + com);
+//console.log(jour + "\n\n" + refText + "\n\n" + com);
 
 var blob = new Blob([jour + "\n\n" + refText + "\n\n" + com], {type: "text/plain;charset=utf-8"});
-saveAs(blob, "helloworld.txt");
+saveAs(blob, y+"-"+m+"-"+j+"-daily.txt");
 
   }
 xhttp.open("GET", url, true);
