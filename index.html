@@ -1,10 +1,121 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<script defer type="text/javascript" src="./jsjs.js"></script>
-	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.8/FileSaver.min.js"></script>
+	<script type="text/javascript" src="https://cdn.rawgit.com/eligrey/FileSaver.js/5ed507ef8aa53d8ecfea96d96bc7214cd2476fd2/FileSaver.min.js"></script>
+	<script type="text/javascript" src="./noms.js"></script>
 </head>
+<h3 id='thetext'>Téléchargement en cours...</h3>
 <body>
-	<h1>Telechargement en cours...</h1>
+<script>
+
+var tag;
+var comm;
+var tst = false;
+var date = new Date();
+var y = date.getUTCFullYear();
+var m = date.getUTCMonth()+1;
+var j = date.getUTCDate();
+var url = ("https://wol.jw.org/fr/wol/h/r30/lp-f/" + y + "/" + m + "/" + j);
+
+const xhttp = new XMLHttpRequest();
+xhttp.onload = function() {
+	tag = this.responseText;
+	var parser = new DOMParser();
+	var doc = parser.parseFromString(tag, "text/html");
+	var id = doc.getElementsByTagName("h2")[1].getAttribute("id").replace(/\D+/, "");
+
+	var jour = doc.getElementById("p"+id).innerText;
+	var ref = doc.getElementById("p"+(parseInt(id)+1)).innerText;
+	var com = doc.getElementById("p"+(parseInt(id)+2));
+	var refCom = com.lastElementChild;
+	com.removeChild(refCom);
+	com = com.innerText;
+	console.log(refCom.innerText);
+
+//================================================================ modifie la ref du texte pour etre lisible par tts =========================================================================
+									
+	var refText = ref.substring(0, ref.lastIndexOf('('));
+	var refTextt = ref.substring(ref.lastIndexOf('('));
+	refTextt = refTextt.replace(":", " verset ");												//change les ":" par "verset"
+	let change = refTextt.substring(refTextt.indexOf('(')+1, refTextt.indexOf('.')+1);			//change le nom raccourcis ex : Mat. par Matthieu
+	refText += modif(change, refTextt);
+	com = extractWords(com);
+	
+//===============================rempli un tableau avec l'index de chaque parenthèses pour repérer les références bibliques à mofifier pour la 'lecture' tts===================
+	
+	var prnths = [];
+	prnths.push(0);
+	var nbr=(com.match(/['(']/g).length * 2);
+	var theStr = [...com];
+	for (var z=0; z<com.length; z++){	
+		if(theStr[z] === '(')
+			prnths.push(z);
+		else if(theStr[z] === ')')
+			prnths.push(z+2);
+	}
+	prnths.push(com.length);
+//===========================================================================================================================================================================
+
+	document.getElementById('thetext').innerText = jour + ".\n\n" + refText + "\n\n";
+	
+//================si première boucle, affiche le commentaire avec un point et va à la ligne==================================================================================
+//================si boucle impair, modifie la référence du commentaire : mise à jour des noms abrégés pour pouvoir les 'lire' avec tts et va à la ligne=========================
+	for(var x=0; x<nbr+1; x++){
+		if(x%2 == 0){
+			document.getElementById('thetext').innerText +=(com.substring(prnths[x], prnths[x+1]-1))+".\n";	//commentaire
+		}
+		else{
+			let comBis = com.substring(prnths[x], prnths[x+1]);
+			let change2 = comBis.substring(comBis.indexOf('(')+1, comBis.indexOf('.')+1);
+			document.getElementById('thetext').innerText += modif(change2, comBis) + "\n";	//reference du commentaire
+		}
+	}
+	//console.log(jour + ".\n\n" + refText + "\n\n" + com);
+
+	/*var blob = new Blob([jour + ".\n\n" + refText + "\n\n" + com], {type: "text/plain;charset=utf-8"});
+	saveAs(blob, y+"-"+m+"-"+j+"-daily.txt");
+	window.close();*/
+  }
+xhttp.open("GET", url, true);
+xhttp.send();
+  
+function extractWords(str) {//============================fonction qui change les "2 points --> verset", "virgule --> et" et "tiret --> a" pour la lecture tts=======================================
+	str = [...str];
+	var i=0
+    for (i; i < str.length; i++) {
+        if(str[i] === '(') {
+            tst = true;
+        }
+		if(tst & (str[i] === ':')){
+			str[i] = ' verset ';
+		}
+		else if(tst & (str[i] === ',')){
+			str[i] = ' et';
+		}
+		else if(tst & (str[i] === '-')){
+			str[i] = ' a ';
+		}
+		if(str[i] === ')')
+			tst = false;
+    }
+    return str.join('');
+}
+
+function modif(theModif, theTextModified){//=================fonction qui change les noms de livres abrégés par les noms complets pour la lecture tts===========================
+	for (const key in nomAbrg) {
+		if (key.includes(theModif)) {
+			theTextModified=theTextModified.replace(theModif, nomAbrg[key]);
+			//console.log(`${nomAbrg[key]}`);
+			//console.log(refTextt);
+		}
+	}
+	return theTextModified;
+}
+</script>
 </body>
 </html>
+
+<!--for disable cors on android browser and cross origin
+do with adb shell and put this line a the root and don't forget to turn on : enable-command-line-on-non-rooted-devices in chrome://flags
+
+echo chromium-browser --disable-web-security --user-data-dir='/data/user/0/com.android.chrome/app_chrome/Default' > /data/local/tmp/chrome-command-line-->
