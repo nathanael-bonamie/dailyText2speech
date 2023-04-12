@@ -2,14 +2,14 @@
 <html>
 <head>
 	<script type="text/javascript" src="https://cdn.rawgit.com/eligrey/FileSaver.js/5ed507ef8aa53d8ecfea96d96bc7214cd2476fd2/FileSaver.min.js"></script>
+	<!--<script type="text/javascript" src="./t2s.js"></script>-->
 	<script type="text/javascript" src="./noms.js"></script>
 </head>
-<h3 id='thetext'>Téléchargement en cours...</h3>
+<h3 onclick="read()" id='thetext'>Telechargement en cours...</h3>
 <body>
 <script>
 
-var tag;
-var comm;
+var tag, comm, comBis, change, change2;
 var tst = false;
 var date = new Date();
 var y = date.getUTCFullYear();
@@ -18,6 +18,7 @@ var j = date.getUTCDate();
 var url = ("https://wol.jw.org/fr/wol/h/r30/lp-f/" + y + "/" + m + "/" + j);
 
 const xhttp = new XMLHttpRequest();
+
 xhttp.onload = function() {
 	tag = this.responseText;
 	var parser = new DOMParser();
@@ -30,14 +31,14 @@ xhttp.onload = function() {
 	var refCom = com.lastElementChild;
 	com.removeChild(refCom);
 	com = com.innerText;
-	console.log(refCom.innerText);
+	//console.log(refCom.innerText);
 
 //================================================================ modifie la ref du texte pour etre lisible par tts =========================================================================
 									
 	var refText = ref.substring(0, ref.lastIndexOf('('));
 	var refTextt = ref.substring(ref.lastIndexOf('('));
 	refTextt = refTextt.replace(":", " verset ");												//change les ":" par "verset"
-	let change = refTextt.substring(refTextt.indexOf('(')+1, refTextt.indexOf('.')+1);			//change le nom raccourcis ex : Mat. par Matthieu
+	change = refTextt.substring(refTextt.indexOf('(')+1, refTextt.indexOf('.')+1);			//change le nom raccourcis ex : Mat. par Matthieu
 	refText += modif(change, refTextt);
 	com = extractWords(com);
 	
@@ -65,8 +66,9 @@ xhttp.onload = function() {
 			document.getElementById('thetext').innerText +=(com.substring(prnths[x], prnths[x+1]-1))+".\n";	//commentaire
 		}
 		else{
-			let comBis = com.substring(prnths[x], prnths[x+1]);
-			let change2 = comBis.substring(comBis.indexOf('(')+1, comBis.indexOf('.')+1);
+			comBis = com.substring(prnths[x], prnths[x+1]);
+			change2 = comBis.substring(comBis.indexOf('(')+1, comBis.indexOf('.')+1);
+			//console.log(change2);
 			document.getElementById('thetext').innerText += modif(change2, comBis) + "\n";	//reference du commentaire
 		}
 	}
@@ -75,6 +77,11 @@ xhttp.onload = function() {
 	/*var blob = new Blob([jour + ".\n\n" + refText + "\n\n" + com], {type: "text/plain;charset=utf-8"});
 	saveAs(blob, y+"-"+m+"-"+j+"-daily.txt");
 	window.close();*/
+	//speak(document.getElementById('thetext').innerText);
+	setTimeout(() => {
+		read();
+	}, 1500);
+	
   }
 xhttp.open("GET", url, true);
 xhttp.send();
@@ -102,15 +109,21 @@ function extractWords(str) {//============================fonction qui change le
 }
 
 function modif(theModif, theTextModified){//=================fonction qui change les noms de livres abrégés par les noms complets pour la lecture tts===========================
+
+	var num = theModif.replace(/[^a-zA-ZéÉ]/g, '');
+	var point = theTextModified.replace(/[.]/g, '');
 	for (const key in nomAbrg) {
-		if (key.includes(theModif)) {
-			theTextModified=theTextModified.replace(theModif, nomAbrg[key]);
-			//console.log(`${nomAbrg[key]}`);
-			//console.log(refTextt);
-		}
+		if (key.includes(num))
+			point = point.replace(num, nomAbrg[key]);
 	}
-	return theTextModified;
+
+	return point;
 }
+
+function read(){
+	const lect = new SpeechSynthesisUtterance(document.getElementById('thetext').innerText);
+	speechSynthesis.speak(lect);
+	}
 </script>
 </body>
 </html>
@@ -118,4 +131,10 @@ function modif(theModif, theTextModified){//=================fonction qui change
 <!--for disable cors on android browser and cross origin
 do with adb shell and put this line a the root and don't forget to turn on : enable-command-line-on-non-rooted-devices in chrome://flags
 
-echo chromium-browser --disable-web-security --user-data-dir='/data/user/0/com.android.chrome/app_chrome/Default' > /data/local/tmp/chrome-command-line-->
+
+echo chrome.exe --autoplay-policy=no-user-gesture-required --user-data-dir='/data/user/0/com.android.chrome/app_chrome/Default' > /data/local/tmp/chrome-command-line
+echo chromium-browser --disable-web-security --user-data-dir='/data/user/0/com.android.chrome/app_chrome/Default' > /data/local/tmp/chrome-command-line
+
+echo chromium-browser --disable-web-security --autoplay-policy=no-user-gesture-required --user-data-dir='/data/user/0/com.android.chrome/app_chrome/Default' > /data/local/tmp/chrome-command-line
+
+chrome.exe --autoplay-policy=no-user-gesture-required-->
