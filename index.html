@@ -1,132 +1,147 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<script type="text/javascript" src="https://cdn.rawgit.com/eligrey/FileSaver.js/5ed507ef8aa53d8ecfea96d96bc7214cd2476fd2/FileSaver.min.js"></script>
-	<!--<script type="text/javascript" src="./t2s.js"></script>-->
 	<script type="text/javascript" src="./noms.js"></script>
 </head>
-<h3 style='margin: 40px; text-align: justify;' id='thetext'>Telechargement en cours...</h3>
+<h3 onClick='read()' style='margin: 40px; 
+  text-align: justify;' id='the'></h3>
 <body>
 <script>
-
-var tag, comm, comBis, change, change2;
-var tst = false;
 var date = new Date();
 var y = date.getUTCFullYear();
 var m = date.getUTCMonth()+1;
 var j = date.getUTCDate();
-var url = ("https://wol.jw.org/fr/wol/h/r30/lp-f/" + y + "/" + m + "/" + j);
-
-const xhttp = new XMLHttpRequest();
-
-xhttp.onload = function() {
-	tag = this.responseText;
-	var parser = new DOMParser();
-	var doc = parser.parseFromString(tag, "text/html");
-	var id = doc.getElementsByTagName("h2")[1].getAttribute("id").replace(/\D+/, "");
-
-	var jour = doc.getElementById("p"+id).innerText;
-	var ref = doc.getElementById("p"+(parseInt(id)+1)).innerText;
-	var com = doc.getElementById("p"+(parseInt(id)+2));
-	var refCom = com.lastElementChild;
-	com.removeChild(refCom);
-	com = com.innerText;
-	//console.log(refCom.innerText);
-
-//================================================================ modifie la ref du texte pour etre lisible par tts =========================================================================
-									
-	var refText = ref.substring(0, ref.lastIndexOf('('));
-	var refTextt = ref.substring(ref.lastIndexOf('('));
-	refTextt = refTextt.replace(":", " verset ");												//change les ":" par "verset"
-	change = refTextt.substring(refTextt.indexOf('(')+1, refTextt.indexOf('.')+1);			//change le nom raccourcis ex : Mat. par Matthieu
-	refText += modif(change, refTextt);
-	com = extractWords(com);
+const url = 'https://wol.jw.org/fr/wol/h/r30/lp-f/' + y + '/' + m + '/' + j;
+const xhr = new XMLHttpRequest();
+var resp, tst;
+var mois = ['de Janvier', 'de Février', 'de Mars', 'd\'Avril', 'de Mai', 'de Juin', 'de Juiller', 'd\'Août', 'de Septembre', 'd\'Octobre', 'de Novembre', 'de Decembre'];
+var listBis = [];
+xhr.onload = () => {
+	resp = xhr.responseXML;
+	var jour = resp.getElementsByClassName("themeScrp")[1].parentNode.getElementsByTagName('h2')[0].innerText;//============récupère le jour et l'affiche
+	write(jour + ".\n\n");
 	
-//===============================rempli un tableau avec l'index de chaque parenthèses pour repérer les références bibliques à mofifier pour la 'lecture' tts===================
 	
-	var prnths = [];
-	prnths.push(0);
-	var nbr=(com.match(/['(']/g).length * 2);
-	var theStr = [...com];
-	for (var z=0; z<com.length; z++){	
-		if(theStr[z] === '(')
-			prnths.push(z);
-		else if(theStr[z] === ')')
-			prnths.push(z+2);
-	}
-	prnths.push(com.length);
-//===========================================================================================================================================================================
-
-	document.getElementById('thetext').innerText = jour + ".\n\n" + refText + "\n\n";
-	
-//================si première boucle, affiche le commentaire avec un point et va à la ligne==================================================================================
-//================si boucle impair, modifie la référence du commentaire : mise à jour des noms abrégés pour pouvoir les 'lire' avec tts et va à la ligne=========================
-	for(var x=0; x<nbr+1; x++){
-		if(x%2 == 0){
-			document.getElementById('thetext').innerText +=(com.substring(prnths[x], prnths[x+1]-1))+".\n";	//commentaire
+	//console.log(resp.getElementsByClassName("sb"));
+	var text = resp.getElementsByClassName("themeScrp")[1].children;//=====================================================récupère le texte et l'affiche
+	for(var j=0; j<text.length-1; j++){
+		if(text[j].nodeName === 'A' & text[j].className === 'b'){//référence du verset du texte du jour
+			write(modif(text[j].innerText) + '.\n');
 		}
-		else{
-			comBis = com.substring(prnths[x], prnths[x+1]);
-			change2 = comBis.substring(comBis.indexOf('(')+1, comBis.indexOf('.')+1);
-			//console.log(change2);
-			document.getElementById('thetext').innerText += modif(change2, comBis) + "\n";	//reference du commentaire
+		if(text[j].nodeName === 'EM'){//texte du jour
+			write(text[j].innerText + '.\u00a0');
 		}
 	}
-	//console.log(jour + ".\n\n" + refText + "\n\n" + com);
-
-	/*var blob = new Blob([jour + ".\n\n" + refText + "\n\n" + com], {type: "text/plain;charset=utf-8"});
-	saveAs(blob, y+"-"+m+"-"+j+"-daily.txt");
-	window.close();*/
-	//speak(document.getElementById('thetext').innerText);
+	
+	var child = resp.getElementsByClassName("sb")[1].childNodes;//====================================================récupère le commentaire et traite les références à part
+	for(var i=0; i<child.length; i++){
+		if(child[i].nodeName === 'A' & child[i].className === 'b'){//références des versets
+			write(modif(child[i].innerText) + '.\n');
+		}
+		if(child[i].nodeName === '#text'){//commentaire
+			remove(child[i].data);
+		}
+		if(child[i].nodeName === 'A' & child[i].className === ''){//référence de la tg
+			//write(child[i].innerText + '\n');
+			let nbrRefTg = child[i].innerText.substring(1).split(/[\.\s]/g);
+			let mnth = mois[parseInt(nbrRefTg[1])-1];
+			write('Commentaire de la Tour de Garde ' +
+			mnth + ' 20' + nbrRefTg[0] + ' page ' + chg2pvt(nbrRefTg[2]) +
+			' paragraphe ' + chg2pvt(nbrRefTg[4]));
+		}
+	}
+	//console.log(listBis);
+	//console.log(resp.getElementsByClassName("sb"));
+	//console.log(resp.getElementsByClassName("themeScrp")[1].children[1].innerText);
+	
 	setTimeout(() => {
 		read();
 	}, 1500);
+}
+xhr.open("GET", url);
+xhr.responseType = "document";
+xhr.send();
+
+
+function modif(str){//=================fonction qui change les noms de livres abrégés par les noms complets pour la lecture tts===========================
+					//=================ainsi que le changement des 2 points, virgules et tirets
 	
-  }
-xhttp.open("GET", url, true);
-xhttp.send();
-  
-function extractWords(str) {//============================fonction qui change les "2 points --> verset", "virgule --> et" et "tiret --> a" pour la lecture tts=======================================
-	str = [...str];
-	var i=0
-    for (i; i < str.length; i++) {
-        if(str[i] === '(') {
-            tst = true;
-        }
-		if(tst & (str[i] === ':')){
-			str[i] = ' verset ';
+	var newStr = str.replace(/[^a-zA-ZéÉ]/g, '');//=======traite la partie texte
+	var number = str.replace(/[^0-9:\\,\\-]/g, '');//=====traite la partie number	
+
+	let nbrLtr = null;
+	if (newStr.length != 0){// si on trouve un nom de livre et pas juste un chapitre et verset ex : 55:22
+		if(/^\d$/.test(str.trim().charAt(0))){//si on trouve un chiffre de lettre ou livre ex : 1 Jean ou 1 Rois
+			nbrLtr = str.trim().charAt(0) + '\u00a0';//on elimine l'espace si il y en a un et on met le chiffre dans nbrLtr
+			number = number.substring(1);//on modifie les versets car le chiffre de la lettre ou du livre s'ajoute aux versets ex : 1 pierre 3:8 donnerais 1 pierre 13:8
 		}
-		else if(tst & (str[i] === ',')){
-			str[i] = ' et';
+		for (const key in nomAbrg) {
+			if (key.includes(newStr)){//cherche et remplace le nom abrégé par le nom entier et breake
+				newStr = newStr.replace(newStr, nomAbrg[key]);
+				if (str.includes(';'))//si trouve un point virgule, met le nom du livre ou lettre dans une liste pour recuperer le nom au tour suivant
+					listBis.push(newStr);
+				break;
+			}
+			else{}
 		}
-		else if(tst & (str[i] === '-')){
-			str[i] = ' a ';
-		}
-		if(str[i] === ')')
-			tst = false;
-    }
-    return str.join('');
+	}
+	else{
+		newStr = listBis.slice(-1);				//si on a que le chapitre et verset, on récupère le nom du livre dans la liste au dernier index
+	}
+	/*if(number.includes(':')){					//si affiche ':'
+		number = number.replace(':', ' verset ');//on ecrit 'verset' pour lire avec tts ex : jean 3:16 on lit jean 3 verset 16
+	}
+	if(number.includes(',')){				//si affiche ','
+		number = number.replace(',', ' et ');//on ecrit 'et' pour lire avec tts ex : marc 3:5,6 on lit marc 3 verset 5 et 6
+	}
+	if(number.includes('-')){				//si affiche '-'
+		number = number.replace('-', ' a ');//on écrit 'à' pour lire avec tts ex : luc 5:4-6 on lit luc 5 verset 4 à 6
+	}*/
+	//if (nbrLtr == null & newStr == null)
+		
+	if (nbrLtr == null & newStr != null)	//si pas de chiffre de lettre ou de livre on reconstitue nom et verset
+		return newStr += " " + chg2pvt(number);
+	else										//si un chiffre de lettre ou livre on reconstitue avec numéro, nom et verset
+		return nbrLtr + newStr + ' ' + chg2pvt(number);
 }
 
-function modif(theModif, theTextModified){//=================fonction qui change les noms de livres abrégés par les noms complets pour la lecture tts===========================
+function write(txt){
+	document.getElementById('the').innerText += txt;
+}
 
-	var num = theModif.replace(/[^a-zA-ZéÉ]/g, '');
-	var point = theTextModified.replace(/[.]/g, '');
-	for (const key in nomAbrg) {
-		if (key.includes(num))
-			point = point.replace(num, nomAbrg[key]);
+function remove(rmv){
+	if (rmv.startsWith(').'))
+		rmv = rmv.substring(2);
+	if (rmv.endsWith(' ('))
+		rmv = rmv.replace(' (', '.');
+	if (rmv.length-1 ==0)
+		return;
+	write('\n' + rmv +'\n');
+}
+
+function chg2pvt(nbr){
+
+	if(nbr.includes(':')){					//si affiche ':'
+		nbr = nbr.replace(':', ' verset ');//on ecrit 'verset' pour lire avec tts ex : jean 3:16 on lit jean 3 verset 16
 	}
-
-	return point;
+	if(nbr.includes(',')){				//si affiche ','
+		nbr = nbr.replace(',', ' et ');//on ecrit 'et' pour lire avec tts ex : marc 3:5,6 on lit marc 3 verset 5 et 6
+	}
+	if(nbr.includes('-')){				//si affiche '-'
+		nbr = nbr.replace('-', ' a ');//on écrit 'à' pour lire avec tts ex : luc 5:4-6 on lit luc 5 verset 4 à 6
+	}
+	return nbr;
 }
 
 function read(){
-	const lect = new SpeechSynthesisUtterance(document.getElementById('thetext').innerText);
+	const lect = new SpeechSynthesisUtterance(document.getElementById('the').innerText);
 	speechSynthesis.speak(lect);
 	}
 </script>
 </body>
 </html>
+
+
 
 <!--for disable cors on android browser and cross origin
 do with adb shell and put this line a the root and don't forget to turn on : enable-command-line-on-non-rooted-devices in chrome://flags
