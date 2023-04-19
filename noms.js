@@ -53,6 +53,5 @@ const nomAbrg = {
 	'Jacq.': 'Jacques',
 	'Pierre': 'Pierre',
 	'Jude': 'Jude',
-	'Rév.': 'Révélation',
-	'w' : 'Tour de Garde'};
+	'Rév.': 'Révélation'};
 
